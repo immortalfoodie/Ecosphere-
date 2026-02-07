@@ -19,6 +19,7 @@ import {
   Truck,
   Award,
   X,
+  AlertTriangle,
 } from "lucide-react"
 import { useState } from "react"
 import Link from "next/link"
@@ -40,6 +41,141 @@ type Product = {
   certifications: string[]
   description: string
   alternatives: string[]
+  isEstimate?: boolean
+}
+
+// Keyword-based eco scoring for fallback
+const ecoKeywords = {
+  high: ["organic", "natural", "eco", "sustainable", "biodegradable", "recycled", "fair trade", "local", "vegan", "plant-based", "green", "renewable"],
+  medium: ["recyclable", "reduced", "light", "fresh", "whole", "pure", "simple"],
+  low: ["plastic", "disposable", "single-use", "artificial", "synthetic", "processed", "chemical"]
+}
+
+const categoryData: Record<string, { carbonRange: [number, number], waterRange: [number, number], recyclable: boolean }> = {
+  beverage: { carbonRange: [0.3, 0.8], waterRange: [50, 200], recyclable: true },
+  snack: { carbonRange: [0.5, 1.5], waterRange: [100, 400], recyclable: true },
+  dairy: { carbonRange: [1.0, 3.0], waterRange: [500, 1500], recyclable: true },
+  meat: { carbonRange: [5.0, 20.0], waterRange: [2000, 8000], recyclable: false },
+  produce: { carbonRange: [0.1, 0.5], waterRange: [20, 100], recyclable: false },
+  bakery: { carbonRange: [0.3, 1.0], waterRange: [100, 500], recyclable: true },
+  frozen: { carbonRange: [0.8, 2.0], waterRange: [200, 800], recyclable: true },
+  personal_care: { carbonRange: [0.5, 2.0], waterRange: [100, 500], recyclable: false },
+  cleaning: { carbonRange: [0.4, 1.5], waterRange: [100, 400], recyclable: true },
+  default: { carbonRange: [0.5, 1.5], waterRange: [100, 500], recyclable: true }
+}
+
+function analyzeKeywords(text: string): { score: number; positiveMatches: string[]; negativeMatches: string[] } {
+  const lowerText = text.toLowerCase()
+  let score = 50 // Start with neutral score
+  const positiveMatches: string[] = []
+  const negativeMatches: string[] = []
+
+  ecoKeywords.high.forEach(keyword => {
+    if (lowerText.includes(keyword)) {
+      score += 10
+      positiveMatches.push(keyword)
+    }
+  })
+
+  ecoKeywords.medium.forEach(keyword => {
+    if (lowerText.includes(keyword)) {
+      score += 5
+      positiveMatches.push(keyword)
+    }
+  })
+
+  ecoKeywords.low.forEach(keyword => {
+    if (lowerText.includes(keyword)) {
+      score -= 10
+      negativeMatches.push(keyword)
+    }
+  })
+
+  return { score: Math.max(10, Math.min(95, score)), positiveMatches, negativeMatches }
+}
+
+function detectCategory(text: string): string {
+  const lowerText = text.toLowerCase()
+  if (lowerText.match(/soda|cola|juice|water|drink|beverage|tea|coffee/)) return "beverage"
+  if (lowerText.match(/chip|snack|cookie|biscuit|cracker|candy|chocolate/)) return "snack"
+  if (lowerText.match(/milk|cheese|yogurt|butter|cream|dairy/)) return "dairy"
+  if (lowerText.match(/meat|chicken|beef|pork|fish|seafood/)) return "meat"
+  if (lowerText.match(/fruit|vegetable|produce|fresh|organic/)) return "produce"
+  if (lowerText.match(/bread|cake|pastry|bakery/)) return "bakery"
+  if (lowerText.match(/frozen|ice cream/)) return "frozen"
+  if (lowerText.match(/shampoo|soap|lotion|cosmetic|personal/)) return "personal_care"
+  if (lowerText.match(/cleaner|detergent|cleaning/)) return "cleaning"
+  return "default"
+}
+
+async function fetchProductFromAPI(barcode: string): Promise<Product | null> {
+  try {
+    const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
+    const data = await response.json()
+
+    if (data.status === 1 && data.product) {
+      const product = data.product
+      const name = product.product_name || product.product_name_en || "Unknown Product"
+      const brand = product.brands || "Unknown Brand"
+      const categories = product.categories || ""
+      const packaging = product.packaging || ""
+
+      // Analyze text for eco scoring
+      const combinedText = `${name} ${brand} ${categories} ${packaging}`
+      const analysis = analyzeKeywords(combinedText)
+      const category = detectCategory(combinedText)
+      const catData = categoryData[category] || categoryData.default
+
+      // Generate approximate data
+      const carbonValue = (catData.carbonRange[0] + catData.carbonRange[1]) / 2
+      const waterValue = Math.round((catData.waterRange[0] + catData.waterRange[1]) / 2)
+
+      // Determine recyclability from packaging
+      const isRecyclable = packaging.toLowerCase().includes("recyclable") ||
+        packaging.toLowerCase().includes("glass") ||
+        packaging.toLowerCase().includes("aluminium") ||
+        packaging.toLowerCase().includes("cardboard") ||
+        catData.recyclable
+
+      // Generate alternatives based on category
+      const alternatives = generateAlternatives(category, name)
+
+      return {
+        id: `api-${barcode}`,
+        name,
+        brand,
+        barcode,
+        ecoScore: analysis.score,
+        carbonFootprint: `${carbonValue.toFixed(1)} kg CO₂`,
+        waterUsage: `${waterValue} L`,
+        recyclable: isRecyclable,
+        certifications: analysis.positiveMatches.slice(0, 3).map(m => m.charAt(0).toUpperCase() + m.slice(1)),
+        description: `Product data estimated from ${categories || 'general'} category. ${analysis.positiveMatches.length > 0 ? `Positive: ${analysis.positiveMatches.join(', ')}` : ''} ${analysis.negativeMatches.length > 0 ? `Concerns: ${analysis.negativeMatches.join(', ')}` : ''}`.trim(),
+        alternatives,
+        isEstimate: true
+      }
+    }
+    return null
+  } catch (error) {
+    console.error("API fetch error:", error)
+    return null
+  }
+}
+
+function generateAlternatives(category: string, productName: string): string[] {
+  const alternatives: Record<string, string[]> = {
+    beverage: ["Reusable water bottle", "Local tap water", "Glass bottle drinks"],
+    snack: ["Homemade snacks", "Bulk store options", "Local bakery items"],
+    dairy: ["Plant-based alternatives", "Local dairy products", "Organic options"],
+    meat: ["Plant-based proteins", "Local/organic meat", "Legumes and beans"],
+    produce: ["Local farmers market", "Seasonal produce", "Home grown options"],
+    bakery: ["Local bakery", "Homemade bread", "Whole grain options"],
+    frozen: ["Fresh alternatives", "Bulk cooking", "Local options"],
+    personal_care: ["Refillable products", "Bar soaps/shampoos", "Natural alternatives"],
+    cleaning: ["DIY cleaners", "Concentrated products", "Refillable options"],
+    default: ["Local alternatives", "Package-free options", "Sustainable brands"]
+  }
+  return alternatives[category] || alternatives.default
 }
 
 export default function ProductScanner() {
@@ -48,21 +184,35 @@ export default function ProductScanner() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showCamera, setShowCamera] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const { state, recordScan } = useEcosphere()
   const products = state.scannerProducts
 
-  const handleScan = (err: any, result: any) => {
+  const handleScan = async (err: any, result: any) => {
     if (result) {
       const barcode = result.text
+      setIsLoading(true)
+      setScanError(null)
+
+      // First check local database
       const product = products.find((p) => p.barcode === barcode)
 
       if (product) {
         setScannedProduct(product)
         recordScan(product.id)
         setShowCamera(false)
-        setScanError(null)
+        setIsLoading(false)
       } else {
-        setScanError(`Barcode ${barcode} not found in database. Try manual search.`)
+        // Try to fetch from API and generate estimate
+        const apiProduct = await fetchProductFromAPI(barcode)
+        setShowCamera(false)
+        setIsLoading(false)
+
+        if (apiProduct) {
+          setScannedProduct(apiProduct)
+        } else {
+          setScanError(`Barcode ${barcode} not found. Try searching by product name.`)
+        }
       }
     }
 
@@ -71,15 +221,33 @@ export default function ProductScanner() {
     }
   }
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (searchQuery) {
       const query = searchQuery.trim().toLowerCase()
+      setIsLoading(true)
+      setScanError(null)
+
+      // First check local database
       const product = products.find(
         (p) => p.name.toLowerCase().includes(query) || p.barcode.toLowerCase() === query
       )
+
       if (product) {
         setScannedProduct(product)
         recordScan(product.id)
+        setIsLoading(false)
+      } else {
+        // If query looks like a barcode, try API
+        if (/^\d{8,13}$/.test(query)) {
+          const apiProduct = await fetchProductFromAPI(query)
+          if (apiProduct) {
+            setScannedProduct(apiProduct)
+            setIsLoading(false)
+            return
+          }
+        }
+        setIsLoading(false)
+        setScanError(`No product found for "${searchQuery}". Try a different search term.`)
       }
     }
   }
@@ -174,15 +342,47 @@ export default function ProductScanner() {
           </div>
         )}
 
+        {/* Loading Indicator */}
+        {isLoading && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="flex items-center justify-center py-8">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="text-blue-700">Searching for product data...</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Product Results */}
         {scannedProduct && (
           <div className="space-y-6">
+            {/* Estimated Data Warning */}
+            {scannedProduct.isEstimate && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-800">Estimated Data</p>
+                  <p className="text-sm text-amber-700">
+                    This product wasn't in our verified database. The eco-score and environmental data are estimated based on product category and keywords. Actual values may vary.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Product Overview */}
             <Card>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-2xl">{scannedProduct.name}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-2xl">{scannedProduct.name}</CardTitle>
+                      {scannedProduct.isEstimate && (
+                        <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                          Estimated
+                        </Badge>
+                      )}
+                    </div>
                     <CardDescription className="text-lg">{scannedProduct.brand}</CardDescription>
                   </div>
                   <div className="text-right">
