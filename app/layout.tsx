@@ -32,6 +32,20 @@ export const metadata: Metadata = {
   description:
     "Interactive platform for environmental sustainability. Scan products, join events, earn rewards, and make a positive impact on our planet.",
   generator: "v0.app",
+  icons: {
+    icon: [
+      {
+        url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>",
+        type: "image/svg+xml",
+      },
+    ],
+    apple: [
+      {
+        url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>",
+        type: "image/svg+xml",
+      },
+    ],
+  },
 }
 
 export default function RootLayout({
