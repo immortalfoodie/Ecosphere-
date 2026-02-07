@@ -6,6 +6,7 @@ import { Space_Grotesk } from "next/font/google"
 import "./globals.css"
 import { EcosphereProvider } from "@/components/ecosphere-provider"
 import { AuthProvider } from "@/components/auth-provider"
+import { EcoChatbot } from "@/components/eco-chatbot"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -42,7 +43,10 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${poppins.variable} ${spaceGrotesk.variable} antialiased`}>
       <body className="font-sans">
         <AuthProvider>
-          <EcosphereProvider>{children}</EcosphereProvider>
+          <EcosphereProvider>
+            {children}
+            <EcoChatbot />
+          </EcosphereProvider>
         </AuthProvider>
       </body>
     </html>
