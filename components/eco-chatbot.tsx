@@ -2,9 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageCircle, X, Send, Bot, User, Leaf, Sparkles } from "lucide-react"
 
 type Message = {
@@ -327,84 +325,86 @@ export function EcoChatbot() {
             </Button>
 
             {/* Chat Window */}
-            <Card className={`fixed bottom-6 right-6 w-[380px] h-[520px] shadow-2xl z-50 transition-all duration-300 ${isOpen ? "scale-100 opacity-100" : "scale-0 opacity-0 pointer-events-none"} flex flex-col overflow-hidden border-green-200`}>
-                {/* Header */}
-                <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                                <Bot className="h-6 w-6" />
-                            </div>
-                            <div>
-                                <CardTitle className="text-lg font-semibold">EcoBot</CardTitle>
-                                <p className="text-xs text-green-100 flex items-center gap-1">
-                                    <span className="h-2 w-2 bg-green-300 rounded-full animate-pulse" />
-                                    AI Eco-Assistant
-                                </p>
-                            </div>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsOpen(false)}
-                            className="text-white hover:bg-white/20 h-8 w-8"
-                        >
-                            <X className="h-5 w-5" />
-                        </Button>
-                    </div>
-                </CardHeader>
-
-                {/* Messages */}
-                <CardContent className="flex-1 p-0 overflow-hidden flex flex-col">
-                    <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-                        <div className="space-y-4">
-                            {messages.map((message) => (
-                                <div
-                                    key={message.id}
-                                    className={`flex gap-2 ${message.sender === "user" ? "justify-end" : "justify-start"}`}
-                                >
-                                    {message.sender === "bot" && (
-                                        <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
-                                            <Leaf className="h-4 w-4 text-white" />
-                                        </div>
-                                    )}
-                                    <div
-                                        className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${message.sender === "user"
-                                            ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-br-md"
-                                            : "bg-gray-100 text-gray-800 rounded-bl-md"
-                                            }`}
-                                    >
-                                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
-                                    </div>
-                                    {message.sender === "user" && (
-                                        <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-                                            <User className="h-4 w-4 text-gray-600" />
-                                        </div>
-                                    )}
+            {isOpen && (
+                <div className="fixed bottom-6 right-6 w-[360px] h-[500px] bg-white rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden border border-green-200">
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 flex-shrink-0">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+                                    <Bot className="h-6 w-6" />
                                 </div>
-                            ))}
+                                <div>
+                                    <h3 className="text-lg font-semibold">EcoBot</h3>
+                                    <p className="text-xs text-green-100 flex items-center gap-1">
+                                        <span className="h-2 w-2 bg-green-300 rounded-full animate-pulse" />
+                                        AI Eco-Assistant
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsOpen(false)}
+                                className="text-white hover:bg-white/20 h-8 w-8"
+                            >
+                                <X className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    </div>
 
-                            {/* Typing Indicator */}
-                            {isTyping && (
-                                <div className="flex gap-2 justify-start">
+                    {/* Messages - Native Scroll */}
+                    <div
+                        ref={scrollRef}
+                        className="flex-1 overflow-y-auto p-4 space-y-4"
+                        style={{ minHeight: 0 }}
+                    >
+                        {messages.map((message) => (
+                            <div
+                                key={message.id}
+                                className={`flex gap-2 ${message.sender === "user" ? "justify-end" : "justify-start"}`}
+                            >
+                                {message.sender === "bot" && (
                                     <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
                                         <Leaf className="h-4 w-4 text-white" />
                                     </div>
-                                    <div className="bg-gray-100 rounded-2xl rounded-bl-md px-4 py-3">
-                                        <div className="flex gap-1">
-                                            <span className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                                            <span className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                                            <span className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                                        </div>
+                                )}
+                                <div
+                                    className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${message.sender === "user"
+                                        ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-br-md"
+                                        : "bg-gray-100 text-gray-800 rounded-bl-md"
+                                        }`}
+                                >
+                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
+                                </div>
+                                {message.sender === "user" && (
+                                    <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                                        <User className="h-4 w-4 text-gray-600" />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {/* Typing Indicator */}
+                        {isTyping && (
+                            <div className="flex gap-2 justify-start">
+                                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+                                    <Leaf className="h-4 w-4 text-white" />
+                                </div>
+                                <div className="bg-gray-100 rounded-2xl rounded-bl-md px-4 py-3">
+                                    <div className="flex gap-1">
+                                        <span className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                                        <span className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                                        <span className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                                     </div>
                                 </div>
-                            )}
-                        </div>
-                    </ScrollArea>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Quick Questions */}
                     {messages.length <= 1 && (
-                        <div className="px-4 pb-2 flex-shrink-0">
+                        <div className="px-4 pb-2 flex-shrink-0 border-t border-gray-100 pt-2">
                             <p className="text-xs text-gray-500 mb-2">Quick questions:</p>
                             <div className="flex flex-wrap gap-1.5">
                                 {quickQuestions.map((q, i) => (
@@ -423,8 +423,8 @@ export function EcoChatbot() {
                         </div>
                     )}
 
-                    {/* Input */}
-                    <div className="p-4 border-t bg-white flex-shrink-0">
+                    {/* Input - Always visible at bottom */}
+                    <div className="p-3 border-t bg-white flex-shrink-0">
                         <div className="flex gap-2">
                             <Input
                                 ref={inputRef}
@@ -432,20 +432,21 @@ export function EcoChatbot() {
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyPress}
                                 placeholder="Ask about sustainability..."
-                                className="flex-1 rounded-full border-green-200 focus:border-green-400 focus:ring-green-400"
+                                className="flex-1 rounded-full border-green-200 focus:border-green-400 focus:ring-green-400 text-sm"
                             />
                             <Button
                                 onClick={handleSend}
                                 disabled={!input.trim() || isTyping}
-                                className="rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 w-10"
+                                className="rounded-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 w-10 flex-shrink-0"
                                 size="icon"
                             >
                                 <Send className="h-4 w-4" />
                             </Button>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            )}
         </>
     )
 }
+
